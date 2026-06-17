@@ -1,0 +1,13 @@
+[
+  {
+    "id": "1",
+    "title": "Test Music 1",
+    "artist": "",
+    "audio": "music/music1.mp3",
+    "levels": [
+      { "level": 1, "chart": "music/chart1.json" },
+      { "level": 1, "chart": "music/chart1.json" },
+      { "level": 1, "chart": "music/chart1.json" }
+    ]
+  }
+]

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rhythm Dance - 歌曲选择</title>
+    <style>
+         :root {
+            --bg-color: #1d2430;
+            --text-main: #d4e5f0;
+            --text-sub: #8fa4b8;
+            --container-bg: rgba(40, 50, 65, 0.6);
+            --border-main: #4a607a;
+            --border-sub: rgba(74, 96, 122, 0.4);
+            --border-active: #7da0c4;
+            --card-bg: rgba(45, 60, 80, 0.4);
+            --btn-bg: #506e8f;
+            --btn-hover: #688cb0;
+            --overlay-bg: rgba(30, 38, 50, 0.95);
+            --setting-bg: #2d3846;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; min-height: 100dvh; transition: background-color 0.3s, color 0.3s;
+        }
+
+        .bg-glow {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+        }
+
+        .stars {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+        }
+
+        .menu-container {
+            position: relative; width: 100%; max-width: 500px; height: 90vh; max-height: 850px;
+            display: flex; flex-direction: column; background: var(--container-bg);
+            border: 2px solid var(--border-main); border-radius: 15px; box-shadow: 0 0 30px var(--border-sub); overflow: hidden;
+        }
+
+        .btn { background: var(--btn-bg); border: none; border-radius: 8px; color: var(--text-main); padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); }
+        .btn:hover { background: var(--btn-hover); transform: translateY(-1px); }
+
+        /* 遮罩与设置界面样式 */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--overlay-bg); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 30px;
+            text-align: center; z-index: 20; transition: opacity 0.3s;
+        }
+        .overlay.hidden { opacity: 0; pointer-events: none; }
+        .overlay h2 {
+            font-size: 24px; color: var(--text-main); margin-bottom: 15px;
+        }
+        .settings-row {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; margin-bottom: 20px; font-size: 14px; color: var(--text-main);
+        }
+        .settings-row input[type="range"] { width: 50%; cursor: pointer; }
+        .shortcut-info {
+            background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px;
+            border: 1px solid var(--border-main); margin-bottom: 25px; font-size: 13px;
+            color: var(--text-sub); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        /* 选歌界面专有样式 */
+        .song-select-container { display: flex; flex-direction: column; width: 100%; flex: 1; overflow: hidden; gap: 15px; }
+        .song-detail-top { flex: 1; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(5px, 2vh, 15px); }
+        .detail-cover { width: clamp(60px, 12vh, 110px); height: clamp(60px, 12vh, 110px); aspect-ratio: 1/1; border-radius: 12px; background: #fff; object-fit: cover; margin-bottom: clamp(4px, 1vh, 8px); box-shadow: 0 0 8px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .detail-title { font-size: clamp(16px, 2.5vh, 22px); font-weight: bold; margin-bottom: 2px; text-align: center; }
+        .detail-artist { font-size: clamp(12px, 1.8vh, 14px); color: var(--text-sub); margin-bottom: clamp(6px, 1.5vh, 12px); }
+        .difficulty-selector { display: flex; gap: 12px; max-width: 350px; overflow-x: auto; padding: 5px 10px; justify-content: center; flex-shrink: 0; margin-bottom: 5px; }
+        .difficulty-selector::-webkit-scrollbar { display: none; }
+        .diff-btn { width: clamp(30px, 5vh, 40px); height: clamp(30px, 5vh, 40px); border-radius: 8px; background: transparent; border: 2px solid var(--text-sub); color: var(--text-sub); display: flex; justify-content: center; align-items: center; font-size: clamp(12px, 2vh, 16px); font-weight: bold; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+        .diff-btn:hover { border-color: var(--text-main); color: var(--text-main); }
+        .diff-btn.selected { background: var(--btn-bg); border-color: var(--btn-bg); color: var(--text-main); }
+
+        .song-list-bottom { flex: 1; overflow-y: auto; padding: 10px 0 20px 0; display: flex; flex-direction: column; gap: 10px; scroll-snap-type: y mandatory; scrollbar-width: none; }
+        .song-list-bottom::-webkit-scrollbar { display: none; }
+        .song-card { background: var(--card-bg); border: 2px solid var(--border-sub); border-radius: 10px; padding: 10px 15px; margin: 0 25px; display: flex; align-items: center; transition: all 0.2s; scroll-snap-align: center; cursor: pointer; }
+        .song-card.selected { background: var(--border-sub); transform: scale(1.02); box-shadow: 0 0 10px var(--border-active); }
+        .song-card:hover:not(.selected) { background: var(--border-sub); }
+        .song-thumb { width: 40px; height: 40px; border-radius: 8px; background: #fff; object-fit: cover; margin-right: 15px; flex-shrink: 0; }
+        .song-info { flex: 1; overflow: hidden; }
+        .song-title { font-size: 16px; font-weight: bold; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .song-artist { font-size: 12px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .song-diffs { display: flex; gap: 5px; justify-content: flex-end; }
+        .diff-badge { width: 22px; height: 22px; border-radius: 6px; background: var(--btn-bg); color: var(--text-main); display: flex; justify-content: center; align-items: center; font-size: 11px; font-weight: bold; }
+
+        @media (max-width: 600px) {
+            .menu-container { max-width: 100%; height: 100vh; height: 100dvh; max-height: none; border: none; border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="stars"></div>
+
+    <div class="menu-container">
+        <div style="padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-main); background: var(--card-bg); flex-shrink: 0;">
+            <h2 style="color: var(--text-main); font-style: italic; margin: 0; font-size: 20px;">Rhythm Dance</h2>
+            <div style="display: flex; gap: 10px;">
+                <button id="btnAutoPlay" class="btn" style="background: #304259; padding: 6px 12px; font-size: 13px;" data-i18n="autoOff">自动: 关</button>
+                <button id="btnOpenSettings" class="btn" style="padding: 6px 12px; font-size: 13px;" data-i18n="settings">⚙️</button>
+            </div>
+        </div>
+
+        <div class="song-select-container">
+            <div class="song-detail-top" id="songDetailTop" style="display: none;">
+                <img id="detailCover" class="detail-cover" src="" alt="Cover">
+                <div id="detailTitle" class="detail-title">Song Title</div>
+                <div id="detailArtist" class="detail-artist">Artist</div>
+                <div id="difficultySelector" class="difficulty-selector"></div>
+                <button id="btnStartSelected" class="btn" style="padding: 8px 35px; font-size: 15px; margin-top: 5px; display: none;" data-i18n="startGame">开始游戏</button>
+            </div>
+            
+            <div class="song-list-bottom" id="songList">
+                <div style="color: var(--text-sub); text-align: center; padding: 20px;" data-i18n="loadingSongs">正在加载歌单配置...</div>
+            </div>
+        </div>
+        
+        <!-- 设置界面遮罩层 -->
+        <div id="settingsOverlay" class="overlay hidden">
+            <h2 data-i18n="gameSettings">游戏设置</h2>
+            <div style="width: 100%; max-width: 350px; text-align: left; background: var(--setting-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-main); margin-bottom: 20px; box-shadow: 0 0 8px rgba(0, 0, 0, 0.6); overflow-y: auto; max-height: 60vh;">
+                <div class="settings-row">
+                    <span data-i18n="language">语言 / Language:</span>
+                    <button id="btnLangToggle" class="btn" style="padding: 4px 12px; font-size: 13px;">简体中文</button>
+                </div>
+                <div class="settings-row">
+                    <span><span data-i18n="musicVol">音乐音量</span> (<span id="valMusicVol">50</span>%):</span>
+                    <input type="range" id="sliderMusicVol" min="0" max="100" value="50">
+                </div>
+                <div class="settings-row">
+                    <span><span data-i18n="sfxVol">音效音量</span> (<span id="valSfxVol">50</span>%):</span>
+                    <input type="range" id="sliderSfxVol" min="0" max="100" value="50">
+                </div>
+                <div class="settings-row">
+                    <span><span data-i18n="offset">判定偏移</span> (<span id="valOffset">0</span>ms):</span>
+                    <input type="range" id="sliderOffset" min="-500" max="500" value="0" step="10">
+                </div>
+                <div class="shortcut-info" data-i18n="shortcutInfo" style="margin-bottom: 0; margin-top: 15px; text-align: center;">
+                    手机端游玩时直接点击屏幕；<br>电脑端游玩时使用键盘 空格 或 回车 键。
+                </div>
+            </div>
+            <button id="btnSettingsBack" class="btn" style="padding: 10px 30px; font-size: 16px;" data-i18n="closeSettings">关闭设置</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 国际化 ---
+        const i18n = {
+            zh: { 
+                loadingSongs: "正在加载歌单配置...", 
+                loadFailed: "加载失败",
+                autoOff: "自动: 关",
+                autoOn: "自动: 开",
+                startGame: "开始游戏",
+                settings: "⚙️",
+                gameSettings: "游戏设置", 
+                language: "语言 / Language:", 
+                musicVol: "音乐音量", 
+                sfxVol: "音效音量",
+                offset: "判定偏移",
+                closeSettings: "关闭设置",
+                shortcutInfo: "手机端游玩时直接点击屏幕；<br>电脑端游玩时使用键盘 空格 或 回车 键。"
+            },
+            en: { 
+                loadingSongs: "Loading songs...", 
+                loadFailed: "Load Failed",
+                autoOff: "Auto: OFF",
+                autoOn: "Auto: ON",
+                startGame: "Start Game",
+                settings: "⚙️",
+                gameSettings: "Game Settings", 
+                language: "Language / 语言:", 
+                musicVol: "Music Vol", 
+                sfxVol: "SFX Vol",
+                offset: "Offset",
+                closeSettings: "Close Settings",
+                shortcutInfo: "Tap the screen to play on Mobile;<br>Use Space or Enter key to play on PC."
+            }
+        };
+        let currentLang = localStorage.getItem('dance_lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
+        function t(key) { return i18n[currentLang][key] || key; }
+        
+        let isAutoPlay = localStorage.getItem('dance_autoPlay') === 'true';
+        function updateAutoPlayBtn() {
+            const btn = document.getElementById('btnAutoPlay');
+            if (btn) {
+                if (isAutoPlay) {
+                    btn.textContent = t('autoOn');
+                    btn.style.background = "var(--border-active)";
+                } else {
+                    btn.textContent = t('autoOff');
+                    btn.style.background = "#304259";
+                }
+            }
+        }
+
+        function updateUIi18n() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.innerHTML = i18n[currentLang][el.getAttribute('data-i18n')] || el.innerHTML;
+            });
+            const langBtn = document.getElementById('btnLangToggle');
+            if(langBtn) langBtn.textContent = currentLang === 'zh' ? '简体中文' : 'English';
+            updateAutoPlayBtn();
+        }
+        updateUIi18n();
+
+        // --- 主题应用 ---
+        function loadLocalSettings() {
+            ['musicVol', 'sfxVol'].forEach(key => {
+                const val = localStorage.getItem('dance_' + key);
+                if (val !== null) {
+                    const map = { musicVol: 'sliderMusicVol', sfxVol: 'sliderSfxVol' };
+                    const textMap = { musicVol: 'valMusicVol', sfxVol: 'valSfxVol' };
+                    document.getElementById(map[key]).value = val;
+                    document.getElementById(textMap[key]).textContent = val;
+                }
+            });
+            const offsetVal = localStorage.getItem('dance_offset');
+            if (offsetVal !== null) {
+                document.getElementById('sliderOffset').value = offsetVal;
+                document.getElementById('valOffset').textContent = offsetVal;
+            }
+        }
+        loadLocalSettings();
+
+        // --- 设置事件绑定 ---
+        document.getElementById('btnLangToggle').addEventListener('click', () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; localStorage.setItem('dance_lang', currentLang); updateUIi18n(); });
+        document.getElementById('btnAutoPlay').addEventListener('click', () => { isAutoPlay = !isAutoPlay; localStorage.setItem('dance_autoPlay', isAutoPlay); updateAutoPlayBtn(); });
+        document.getElementById('btnOpenSettings').addEventListener('click', () => document.getElementById('settingsOverlay').classList.remove('hidden'));
+        document.getElementById('btnSettingsBack').addEventListener('click', () => document.getElementById('settingsOverlay').classList.add('hidden'));
+        ['musicVol', 'sfxVol'].forEach(key => {
+            const map = { musicVol: 'sliderMusicVol', sfxVol: 'sliderSfxVol' };
+            const textMap = { musicVol: 'valMusicVol', sfxVol: 'valSfxVol' };
+            document.getElementById(map[key]).addEventListener('input', (e) => { document.getElementById(textMap[key]).textContent = e.target.value; localStorage.setItem('dance_' + key, e.target.value); });
+        });
+        document.getElementById('sliderOffset').addEventListener('input', (e) => {
+            document.getElementById('valOffset').textContent = e.target.value;
+            localStorage.setItem('dance_offset', e.target.value);
+        });
+
+        // --- 选歌与跳转核心逻辑 ---
+        function normalizeSongs(songs) {
+            return songs.map(s => {
+                if (!s.levels) s.levels = [{ level: '?', chart: s.chart }];
+                return s;
+            });
+        }
+
+        let allSongsData = [];
+        const DEFAULT_COVER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        let scrollDebounceTimer;
+        let selectedIndex = -1;
+        let isScrollingProgrammatically = false;
+        let currentSelectedSong = null;
+        let currentSelectedLevel = null;
+
+        async function fetchSongList() {
+            try {
+                const res = await fetch('song_list.json');
+                if (!res.ok) throw new Error("无法加载 song_list.json");
+                const songs = await res.json();
+                renderSongList(songs);
+            } catch (err) {
+                console.error("加载资源失败:", err);
+                document.getElementById('songList').innerHTML = `<div style="color: #c47e7e; font-size: 14px; text-align: center; padding: 20px;">${t('loadFailed')}: ${err.message}</div>`;
+            }
+        }
+
+        function renderSongList(songs) {
+            allSongsData = normalizeSongs(songs);
+            const listContainer = document.getElementById('songList');
+            listContainer.innerHTML = '';
+            selectedIndex = -1;
+            
+            if (allSongsData.length === 0) return;
+            const multiplyFactor = Math.max(5, Math.ceil(15 / allSongsData.length)); 
+            
+            for (let i = 0; i < multiplyFactor; i++) {
+                allSongsData.forEach((song, originalIdx) => {
+                    const card = document.createElement('div');
+                    card.className = 'song-card';
+                    card.dataset.index = originalIdx;
+                    
+                    const coverSrc = song.cover || DEFAULT_COVER;
+                    const diffHtml = song.levels.map(l => `<div class="diff-badge">${l.level}</div>`).join('');
+                    
+                    card.innerHTML = `
+                        <img class="song-thumb" src="${coverSrc}" onerror="this.src='${DEFAULT_COVER}'">
+                        <div class="song-info">
+                            <div class="song-title">${song.title}</div>
+                            <div class="song-artist">${song.artist}</div>
+                        </div>
+                        <div class="song-diffs">${diffHtml}</div>
+                    `;
+                    
+                    card.onclick = function() {
+                        if (isScrollingProgrammatically) return;
+                        isScrollingProgrammatically = true;
+                        selectedIndex = originalIdx;
+                        selectSongForDetail(song, this);
+                        
+                        listContainer.style.scrollSnapType = 'none';
+                        this.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        
+                        setTimeout(() => {
+                            listContainer.style.scrollSnapType = 'y mandatory';
+                            isScrollingProgrammatically = false;
+                            handleSongScroll({ target: listContainer }, true);
+                        }, 400); 
+                    };
+                    listContainer.appendChild(card);
+                });
+            }
+            
+            listContainer.removeEventListener('scroll', handleSongScroll);
+            listContainer.addEventListener('scroll', handleSongScroll);
+
+            // 初始化定位
+            setTimeout(() => {
+                const middleGroupStartIndex = Math.floor(multiplyFactor / 2) * allSongsData.length;
+                const targetCard = listContainer.children[middleGroupStartIndex];
+                if (targetCard) {
+                    isScrollingProgrammatically = true;
+                    listContainer.style.scrollSnapType = 'none';
+                    targetCard.scrollIntoView({ block: 'center', behavior: 'instant' });
+                    setTimeout(() => {
+                        listContainer.style.scrollSnapType = 'y mandatory';
+                        isScrollingProgrammatically = false;
+                        selectedIndex = 0;
+                        selectSongForDetail(allSongsData[0], targetCard);
+                    }, 50);
+                }
+            }, 50);
+        }
+
+        function handleSongScroll(e, force = false) {
+            if (isScrollingProgrammatically && !force) return;
+            const container = e.target || document.getElementById('songList');
+            
+            clearTimeout(scrollDebounceTimer);
+            scrollDebounceTimer = setTimeout(() => {
+                const containerCenter = container.getBoundingClientRect().top + container.offsetHeight / 2;
+                let closestCard = null;
+                let minDistance = Infinity;
+
+                Array.from(container.children).forEach(card => {
+                    const cardCenter = card.getBoundingClientRect().top + card.offsetHeight / 2;
+                    const distance = Math.abs(containerCenter - cardCenter);
+                    if (distance < minDistance) { minDistance = distance; closestCard = card; }
+                });
+
+                if (!closestCard) return;
+                const originalIdx = parseInt(closestCard.dataset.index);
+                const totalElements = container.children.length;
+                const currentItemIdx = Array.from(container.children).indexOf(closestCard);
+                
+                // 无缝跳转 (Warp) 处理
+                if (currentItemIdx < allSongsData.length || currentItemIdx >= totalElements - allSongsData.length) {
+                    isScrollingProgrammatically = true;
+                    const multiplyFactor = totalElements / allSongsData.length;
+                    const middleGroupStartIndex = Math.floor(multiplyFactor / 2) * allSongsData.length;
+                    const targetCard = container.children[middleGroupStartIndex + originalIdx];
+                    
+                    container.style.scrollSnapType = 'none';
+                    targetCard.scrollIntoView({ block: 'center', behavior: 'instant' });
+                    
+                    setTimeout(() => {
+                        container.style.scrollSnapType = 'y mandatory';
+                        isScrollingProgrammatically = false;
+                        if (originalIdx !== selectedIndex) {
+                            selectedIndex = originalIdx;
+                            selectSongForDetail(allSongsData[originalIdx], targetCard);
+                        } else {
+                            document.querySelectorAll('.song-card').forEach(c => c.classList.remove('selected'));
+                            targetCard.classList.add('selected');
+                        }
+                    }, 50);
+                } else {
+                    if (originalIdx !== selectedIndex) {
+                        selectedIndex = originalIdx;
+                        selectSongForDetail(allSongsData[originalIdx], closestCard);
+                    } else {
+                        document.querySelectorAll('.song-card').forEach(c => c.classList.remove('selected'));
+                        closestCard.classList.add('selected');
+                    }
+                }
+            }, 150);
+        }
+
+        function selectSongForDetail(song, centerCardElement) {
+            document.querySelectorAll('.song-card').forEach(c => c.classList.remove('selected'));
+            if (centerCardElement) centerCardElement.classList.add('selected');
+            
+            document.getElementById('songDetailTop').style.display = 'flex';
+            document.getElementById('detailCover').src = song.cover || DEFAULT_COVER;
+            document.getElementById('detailTitle').textContent = song.title;
+            document.getElementById('detailArtist').textContent = song.artist;
+            document.getElementById('btnStartSelected').style.display = 'block';
+            
+            const diffSelector = document.getElementById('difficultySelector');
+            diffSelector.innerHTML = '';
+            
+            song.levels.forEach((levelInfo, idx) => {
+                const btn = document.createElement('div');
+                btn.className = 'diff-btn';
+                btn.textContent = levelInfo.level;
+                if (idx === 0) {
+                    btn.classList.add('selected');
+                    currentSelectedSong = song;
+                    currentSelectedLevel = levelInfo;
+                }
+                btn.onclick = () => {
+                    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    currentSelectedLevel = levelInfo;
+                };
+                diffSelector.appendChild(btn);
+            });
+        }
+
+        document.getElementById('btnStartSelected').addEventListener('click', () => {
+            if (currentSelectedSong && currentSelectedLevel) {
+                const audioParam = encodeURIComponent(currentSelectedSong.audio);
+                const chartParam = encodeURIComponent(currentSelectedLevel.chart);
+                window.location.href = `game.html?audio=${audioParam}&chart=${chartParam}`;
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', fetchSongList);
+    </script>
+</body>
+</html>
