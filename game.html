@@ -572,7 +572,6 @@ class Character {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.scale(this.scaleX, this.scaleY);
         
         // 为NPC角色降低亮度
         if (!this.isPlayer) {
@@ -595,15 +594,23 @@ class Character {
             let renderScale = 0.4; // 此数值可根据你的美术资源实际分辨率进行调整
             let w = imgToDraw.naturalWidth * renderScale;
             let h = imgToDraw.naturalHeight * renderScale;
-            ctx.drawImage(imgToDraw, -w / 2, -h / 2, w, h); // 锚点设在中心
+            
+            // 将锚点设为图片底边中心，同时保持原有视觉位置不动
+            ctx.translate(0, h / 2);
+            ctx.scale(this.scaleX, this.scaleY);
+            ctx.drawImage(imgToDraw, -w / 2, -h, w, h); // 从底边向上绘制
         } else {
+            // 占位符原来的底边在 y + 30 的位置
+            ctx.translate(0, 30);
+            ctx.scale(this.scaleX, this.scaleY);
+            
             ctx.fillStyle = this.color;
             if (this.poseIndex === -1) ctx.fillStyle = "#555";
             
-            // 绘制简单的身体和头代替角色 (将其移至中心点附近)
-            ctx.fillRect(-30, -30, 60, 60); 
+            // 绘制简单的身体和头代替角色 (基于新的底边锚点向上绘制)
+            ctx.fillRect(-30, -60, 60, 60); 
             ctx.beginPath();
-            ctx.arc(0, -50, 25, 0, Math.PI * 2);
+            ctx.arc(0, -80, 25, 0, Math.PI * 2);
             ctx.fill();
             
             // 绘制当前的动作编号（占位标示）
@@ -611,7 +618,7 @@ class Character {
             ctx.font = "20px Arial";
             ctx.textAlign = "center";
             let poseText = this.poseIndex === -1 ? "MISS" : "P" + (this.poseIndex + 1);
-            ctx.fillText(poseText, 0, 0);
+            ctx.fillText(poseText, 0, -30);
         }
 
         ctx.restore();
