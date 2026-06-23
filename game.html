@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Rhythm Dance</title>
     <style>
+        * {
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -21,9 +31,6 @@
             height: 100dvh;
             overflow: hidden;
             font-family: 'Arial', sans-serif;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
         }
 
         #gameContainer {
@@ -821,6 +828,11 @@
 
         // 屏蔽手机端的长按菜单和右键菜单
         window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // 屏蔽长按文字选择
+        window.addEventListener('selectstart', (e) => {
             e.preventDefault();
         });
 
