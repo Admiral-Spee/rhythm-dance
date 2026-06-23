@@ -826,6 +826,10 @@
         window.addEventListener('pointerup', handlePointerUp);
         canvas.addEventListener('pointercancel', handlePointerUp);
 
+        // 彻底屏蔽移动端底层触摸默认行为，防止安卓触发长按震动和放大镜
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
         // 屏蔽手机端的长按菜单和右键菜单
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
