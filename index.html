@@ -335,10 +335,72 @@
                 border-radius: 0;
             }
         }
+
+        /* 移动端横屏提示蒙层 */
+        .landscape-prompt {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background-color: #051324;
+            color: #b3dfff;
+            z-index: 10000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .landscape-prompt .prompt-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .landscape-prompt .phone-icon {
+            font-size: 64px;
+            animation: rotatePhone 2s ease-in-out infinite;
+        }
+
+        .landscape-prompt .prompt-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00f2ff;
+            line-height: 1.5;
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+        }
+
+        @keyframes rotatePhone {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            50% {
+                transform: rotate(-90deg);
+            }
+
+            100% {
+                transform: rotate(0deg);
+            }
+        }
     </style>
 </head>
 
 <body>
+    <!-- 移动端横屏提示蒙层 -->
+    <div id="landscape-prompt" class="landscape-prompt">
+        <div class="prompt-content">
+            <div class="phone-icon">📱</div>
+            <div class="prompt-text" data-i18n="landscapeTip">请旋转设备至竖屏状态以进行游戏</div>
+        </div>
+    </div>
+
     <div class="bg-glow"></div>
     <div class="stars"></div>
 
@@ -533,7 +595,8 @@
                 pleaseFillFields: "请完整填写歌曲名称并上传音频与至少一个谱面",
                 saveSuccess: "保存成功！",
                 loadedAudio: "已存在音频",
-                storageWarning: "提示：上传内容仅保存于浏览器本地，清理浏览器垃圾、无痕浏览或更换浏览器将导致数据丢失，请务必妥善保存您的本地谱面文件！"
+                storageWarning: "提示：上传内容仅保存于浏览器本地，清理浏览器垃圾、无痕浏览或更换浏览器将导致数据丢失，请务必妥善保存您的本地谱面文件！",
+                landscapeTip: "请旋转设备至竖屏状态以进行游戏"
             },
             en: {
                 loadingSongs: "Loading songs...",
@@ -574,7 +637,8 @@
                 pleaseFillFields: "Please enter song title, upload audio and at least one chart",
                 saveSuccess: "Saved successfully!",
                 loadedAudio: "Audio Loaded",
-                storageWarning: "Note: Uploaded content is stored only locally in the browser. Clearing browser junk, using incognito mode or changing browsers will cause data loss. Please make sure to back up your local source files!"
+                storageWarning: "Note: Uploaded content is stored only locally in the browser. Clearing browser junk, using incognito mode or changing browsers will cause data loss. Please make sure to back up your local source files!",
+                landscapeTip: "Please rotate your device to portrait mode to play the game"
             }
         };
         let currentLang = localStorage.getItem('dance_lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
@@ -1282,6 +1346,31 @@
                 window.location.href = `game.html?audio=${audioParam}&chart=${chartParam}`;
             }
         });
+
+        // --- 移动端横竖屏适配 ---
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || (window.innerWidth <= 1024 && 'ontouchstart' in window);
+        }
+
+        function handleOrientation() {
+            const prompt = document.getElementById('landscape-prompt');
+            if (isMobileDevice()) {
+                if (window.innerWidth > window.innerHeight) {
+                    // 横屏状态：显示提示
+                    prompt.style.display = 'flex';
+                } else {
+                    // 竖屏状态：隐藏提示
+                    prompt.style.display = 'none';
+                }
+            } else {
+                prompt.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('resize', handleOrientation);
+        window.addEventListener('orientationchange', handleOrientation);
+        handleOrientation(); // 初始化检测
 
         window.addEventListener('DOMContentLoaded', fetchSongList);
     </script>

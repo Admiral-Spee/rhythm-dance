@@ -131,6 +131,53 @@
         .val-miss {
             color: #d68a8a;
         }
+
+        /* FC/AP 动画特效 */
+        .fc-ap-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 50;
+            white-space: nowrap;
+            padding: 0 20px;
+            /* 增加水平内边距，防止斜体超出裁切边界被截断 */
+            background: linear-gradient(90deg, #ff5e5e, #ffb347, #ffde59, #85e085, #4ecdc4, #c9a0dc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)) drop-shadow(0px 0px 2px #000000);
+        }
+
+        @keyframes fcApPopup {
+            0% {
+                transform: translate(-50%, -20%);
+                opacity: 0;
+            }
+
+            15% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+                filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1)) drop-shadow(0px 0px 2px #000000);
+            }
+
+            85% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+                filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)) drop-shadow(0px 0px 2px #000000);
+            }
+
+            100% {
+                transform: translate(-50%, -80%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -142,6 +189,7 @@
             <button id="backBtn" class="top-btn">返回选歌</button>
         </div>
         <canvas id="gameCanvas" width="720" height="1280"></canvas>
+        <div id="fcApDisplay" class="fc-ap-display" style="display: none;">FULL COMBO</div>
     </div>
 
     <div id="resultScreen">
@@ -230,7 +278,10 @@
                 good: "resources/sfx/good.mp3",
                 empty: "resources/sfx/empty.mp3",
                 flick: "resources/sfx/flick.mp3",
-                hold: "resources/sfx/hold.mp3"
+                hold: "resources/sfx/hold.mp3",
+                all_perfect: "resources/sfx/all_perfect.mp3",
+                full_combo: "resources/sfx/full_combo.mp3",
+                clear: "resources/sfx/clear.mp3"
             },
             music: audioParam || "music/music1.mp3",    // 根据选歌界面传入的 URL 参数加载音乐
             beatmap: chartParam || "music/chart1.json"  // 根据选歌界面传入的 URL 参数加载谱面
@@ -409,10 +460,10 @@
 
         // 使用 Web Audio API 加载音效资源，大幅降低移动端点击延迟
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const SFX_BUFFERS = { perfect: null, great: null, good: null, empty: null, flick: null, hold: null };
+        const SFX_BUFFERS = { perfect: null, great: null, good: null, empty: null, flick: null, hold: null, all_perfect: null, full_combo: null, clear: null };
 
         async function initSFX() {
-            const keys = ['perfect', 'great', 'good', 'empty', 'flick', 'hold'];
+            const keys = ['perfect', 'great', 'good', 'empty', 'flick', 'hold', 'all_perfect', 'full_combo', 'clear'];
             for (const key of keys) {
                 if (ASSETS.sfx[key]) {
                     try {
@@ -487,6 +538,8 @@
         let lastBeatInt = -1; // 用于追踪节拍切换
         let maxMeasureWithNote = 0;
         let isGameOver = false;
+        let isSongEnding = false;
+        let fcApShown = false;
         let maxCombo = 0;
         let stats = { perfect: 0, great: 0, good: 0, miss: 0 };
         const isAutoPlay = localStorage.getItem('dance_autoPlay') === 'true';
@@ -887,7 +940,7 @@
                 }
             } else {
                 // 如果附近有未处理的挑动音符（±150ms内），说明玩家按下的动作是为了后续滑动，不播放空按音效
-                let isFlickIntended = activeNotes.some(n => 
+                let isFlickIntended = activeNotes.some(n =>
                     (n.isFlick || n.isHeadFlick) && !n.isHit && !n.isMissed && Math.abs(nowTime - n.time) <= 0.150
                 );
                 if (!isFlickIntended) {
@@ -1243,11 +1296,42 @@
 
             // 检测是否游戏结束 (音乐与UI完全淡出结束后触发)
             let fadeOutStartBeat = (maxMeasureWithNote + 1) * 4;
-            if (currentBeat >= fadeOutStartBeat + 4 && !isGameOver) {
-                isGameOver = true;
-                isPlaying = false;
-                showResultScreen();
-                return;
+            if (currentBeat >= fadeOutStartBeat + 4 && !isSongEnding) {
+                isSongEnding = true;
+                // 统一等待结算提示（AP/FC/SC）动画播完 (约 6 秒)
+                setTimeout(() => {
+                    isGameOver = true;
+                    isPlaying = false;
+                    showResultScreen();
+                }, 6000);
+            }
+
+            // 检查是否触发 FC / AP (最后一个音符后 2 拍)
+            let lastNote = BEATMAP.notes[BEATMAP.notes.length - 1];
+            let lastNoteBeat = lastNote ? (lastNote.endBeat !== undefined ? lastNote.endBeat : lastNote.beat) : 0;
+            if (lastNote && !fcApShown && currentBeat >= lastNoteBeat + 2) {
+                fcApShown = true;
+                const fcApDisplay = document.getElementById('fcApDisplay');
+                fcApDisplay.style.display = 'block';
+                fcApDisplay.style.animation = 'none';
+                void fcApDisplay.offsetWidth; // 触发重绘重置动画
+                fcApDisplay.style.animation = 'fcApPopup 5s ease-out forwards';
+
+                if (stats.good === 0 && stats.miss === 0 && stats.perfect > 0) {
+                    if (stats.great === 0) {
+                        fcApDisplay.className = 'fc-ap-display';
+                        fcApDisplay.textContent = 'ALL PERFECT';
+                        playSFX('all_perfect');
+                    } else {
+                        fcApDisplay.className = 'fc-ap-display';
+                        fcApDisplay.textContent = 'FULL COMBO';
+                        playSFX('full_combo');
+                    }
+                } else {
+                    fcApDisplay.className = 'fc-ap-display';
+                    fcApDisplay.textContent = 'SHOW CLEAR';
+                    playSFX('clear');
+                }
             }
 
             // 核心时间同步：使用高精度平滑插值时间，彻底解决卡顿和音画不同步
@@ -2016,6 +2100,9 @@
                 maxCombo = 0;
                 stats = { perfect: 0, great: 0, good: 0, miss: 0 };
                 isGameOver = false;
+                isSongEnding = false;
+                fcApShown = false;
+                document.getElementById('fcApDisplay').style.display = 'none';
                 isFever = false;
                 isPaused = false;
                 feverCombo = 0;
